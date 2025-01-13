@@ -35,7 +35,7 @@ public class WorkItemRepository {
     private static final String clusterId = "redshift-cluster-1";
 
     RedshiftDataClient getClient() {
-        Region region = Region.US_WEST_2;
+        Region region = Region.US_EAST_1;
         return RedshiftDataClient.builder()
                 .region(region)
                 .credentialsProvider(ProfileCredentialsProvider.create())
@@ -112,25 +112,34 @@ public class WorkItemRepository {
     void checkStatement(String sqlId) {
         try {
             DescribeStatementRequest statementRequest = DescribeStatementRequest.builder()
-                    .id(sqlId)
-                    .build();
+                .id(sqlId)
+                .build();
 
-            // Wait until the sql statement processing is finished.
+            // Wait until the SQL statement processing is finished.
             String status;
             while (true) {
                 DescribeStatementResponse response = getClient().describeStatement(statementRequest);
                 status = response.statusAsString();
                 System.out.println("..." + status);
 
-                if (status.compareTo("FINISHED") == 0) {
+                if ("FINISHED".equals(status) || "FAILED".equals(status) || "ABORTED".equals(status)) {
+                    // Exit loop if the statement is finished, failed, or aborted
                     break;
                 }
                 Thread.sleep(500);
             }
-            System.out.println("The statement is finished!");
+
+            if ("FAILED".equals(status) || "ABORTED".equals(status)) {
+                // Retrieve and print the error message if the statement failed or was aborted
+                DescribeStatementResponse response = getClient().describeStatement(statementRequest);
+                String errorMessage = response.error();
+                System.err.println("Statement execution failed with error: " + errorMessage);
+            } else {
+                System.out.println("The statement is finished successfully!");
+            }
 
         } catch (RedshiftDataException | InterruptedException e) {
-            System.err.println(e.getMessage());
+            System.err.println("An exception occurred: " + e.getMessage());
             System.exit(1);
         }
     }

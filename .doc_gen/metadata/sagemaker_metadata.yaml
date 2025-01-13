@@ -270,6 +270,15 @@ sagemaker_CreateEndpoint:
     sagemaker: {CreateEndpoint}
 sagemaker_CreateModel:
   languages:
+    Java:
+      versions:
+        - sdk_version: 2
+          github: javav2/example_code/sagemaker
+          sdkguide:
+          excerpts:
+            - description:
+              snippet_tags:
+                - sagemaker.java2.create_model.main
     SAP ABAP:
       versions:
         - sdk_version: 1

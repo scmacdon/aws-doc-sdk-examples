@@ -57,7 +57,6 @@ You can use an existing VPC or create a new one. Make sure the VPC has at least 
 If you don't know a suitable VPC and subnets, you can get them by running the Amazon Neptune Basics scenario available in the AWS Code Library.
 
 In addition to VPC information, the Amazon Neptune Basics scenario creates an Amazon cluster and database instance you can use in this use case. 
-
  
 
 ## Create the Lambda Execution IAM Role
@@ -238,6 +237,25 @@ aws lambda create-function \
   --vpc-config SubnetIds=subnet-abcdxxxx,subnet-xyz9xxxx,SecurityGroupIds=sg-abc1xxxx
 
 ```
+
+### Invoke your Lambda function
+
+You can invoke the Lambda function using this CLI command. 
+
+```bash
+aws lambda invoke --function-name NeptuneLoader output.
+```
+
+You will see the following command line message.
+```json
+     {
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+     }
+```
+
+Check the output.log for immediate output, but your logs will be detailed in CloudWatch.
+
  
 ### View CloudWatch Logs
 
@@ -271,19 +289,15 @@ aws logs get-log-events \
 
 Replace <your-log-stream-name> with the actual stream name returned in the previous command.
 
-
-
-
 aws logs describe-log-groups | grep NeptuneLoader
 aws logs describe-log-streams --log-group-name /aws/lambda/NeptuneLoader
 aws logs get-log-events --log-group-name /aws/lambda/NeptuneLoader --
 
 Choose the **Invoke** button. After the Lambda function is invoked, you see a successful message. 
 
-![AWS Tracking Application](images/pic8.png)
 
 ### Next steps
-Congratulations, you have created a Lambda function that automatically applies tags to digital assets located in an S3 bucket. As stated at the beginning of this tutorial, be sure to delete all of the resources that you created during this tutorial so that you won't be charged.
+Congratulations, you have created a Lambda function that queries Neptune data. As stated at the beginning of this tutorial, be sure to delete all of the resources that you created during this tutorial so that you won't be charged.
 
 For more AWS multiservice examples, see
 [usecases](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/javav2/usecases).

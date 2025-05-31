@@ -60,8 +60,11 @@ In addition to VPC information, the Amazon Neptune Basics scenario creates an Am
 
 ### Add data to the database
 
-After you setup the Amazon Neptune cluster and database, you can add data to it. That data is queried by the Lambda function created in this guide. 
+Once your Amazon Neptune cluster and database are set up, the next step is to load data into it. This data will be accessed by the AWS Lambda function created as part of this guide.
 
+Amazon Neptune supports multiple data loading methods, including bulk loading from Amazon S3, Gremlin and SPARQL queries, and integration with AWS Database Migration Service.
+
+To efficiently populate your Neptune database, use the Neptune bulk loader, which imports data stored in Amazon S3 using formats such as CSV, RDF, or Turtle.
 For information on how to add data to the Amazon Neptune database, see [Loading Data into a Neptune DB Instance](https://docs.aws.amazon.com/neptune/latest/userguide/bulk-load-data.html).
 
 ## Create the Lambda Execution IAM Role

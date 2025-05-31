@@ -57,7 +57,12 @@ You can use an existing VPC or create a new one. Make sure the VPC has at least 
 If you don't know a suitable VPC and subnets, you can get them by running the Amazon Neptune Basics scenario available in the AWS Code Library.
 
 In addition to VPC information, the Amazon Neptune Basics scenario creates an Amazon cluster and database instance you can use in this use case. 
- 
+
+### Add data to the database
+
+After you setup the Amazon Neptune cluster and database, you can add data to it. That data is queries by tbe Lambda function created in this guide. 
+
+Fur information on how to add data to the Amazon Neptune database. see [Loading Data into a Neptune DB Instance](https://docs.aws.amazon.com/neptune/latest/userguide/bulk-load-data.html).
 
 ## Create the Lambda Execution IAM Role
 

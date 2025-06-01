@@ -8,13 +8,11 @@
 | Audience   |  Developer (intermediate)        |
 | Required skills   | Java, Maven  |
 
-This guide demonstrates how to create and deploy an AWS Lambda function that queries data from an Amazon Neptune graph database using the Neptune Data Client API. 
+This guide provides a step-by-step walkthrough for creating and deploying an AWS Lambda function that queries an Amazon Neptune graph database using the Neptune Data API.
 
-Amazon Neptune is a fully managed graph database. Since Neptune instances reside in a VPC, any Lambda function that needs to connect to Neptune must be configured to run within the same VPC and be granted necessary network and IAM permissions. External access is not supported.
+Amazon Neptune is a fully managed graph database service designed to operate within a Virtual Private Cloud (VPC). Because of this, any Lambda function that needs to access Neptune must also run inside the same VPC and be granted appropriate network and IAM permissions—external access is not supported.
 
-To create an AWS Lambda function that queries an Amazon Neptune graph database using the Neptune Data API, it's essential to configure your AWS network infrastructure correctly. This includes setting up the necessary VPC, subnets, security groups, and IAM roles to ensure secure and efficient communication between Lambda and Neptune. 
-
-This guide walks you through all the necessary steps to provision and configure the required AWS resources for this solution, including VPC settings, IAM roles, and network connectivity.
+To ensure secure and reliable communication between Lambda and Neptune, you’ll configure key AWS infrastructure components, including VPC subnets, security groups, and IAM roles. This guide covers all necessary setup and configuration tasks to help you successfully connect your Lambda function to Neptune using the Neptune Data API.
 
 **Note**: Lambda is a compute service that you can use to run code without provisioning or managing servers. You can create Lambda functions in various programming languages. For more information about Lambda, see
 [What is AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html).

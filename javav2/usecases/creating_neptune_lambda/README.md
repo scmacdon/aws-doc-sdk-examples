@@ -47,11 +47,17 @@ To follow along with this tutorial, you need the following:
 
 ## Set Up the Amazon Neptune Cluster and VPC
 
-You need a VPC with at least two subnets in different Availability Zones (AZs) to support Neptune's high availability and networking requirements.
+Amazon Neptune requires a VPC (Virtual Private Cloud) with at least two subnets in different Availability Zones (AZs) to ensure high availability and fault tolerance.
 
-If you don't know a suitable VPC and subnets, you can get them by running the Amazon Neptune Basics scenario available in the AWS Code Library.
+If you're unsure which VPC or subnets to use, you can easily generate the required resources by running the Amazon Neptune Basics scenario from the AWS Code Library. This setup will provision:
 
-In addition to VPC information, the Amazon Neptune Basics scenario creates an Amazon cluster and database instance you can use in this use case. 
+ - A suitable VPC with subnets in multiple AZs
+
+ - A Neptune DB cluster and instance
+
+ - All necessary networking and security configurations
+
+This is a quick and recommended way to get a working Neptune environment that you can immediately use for this use case.
 
 ### Add data to the database
 

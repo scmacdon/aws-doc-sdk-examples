@@ -1,4 +1,4 @@
-#  Creating an AWS Lambda function that queries Neptune graph data within the VPC 
+#  Accessing Neptune Graph Data from Lambda in a VPC Using the AWS SDK for Java 
 
 ## Overview
 

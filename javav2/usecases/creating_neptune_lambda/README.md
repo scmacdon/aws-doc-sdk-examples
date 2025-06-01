@@ -246,6 +246,40 @@ aws lambda create-function \
 
 ```
 
+###  verify the Security Group rules
+
+To enable communication between your Lambda function and the Neptune database, you must configure the security 
+group rules properly:
+
+#### Neptune DB Security Group
+
+You must allow inbound traffic on port 8182 from the Lambda function's security group.
+
+Use the following CLI command 
+
+``` bash
+
+aws ec2 authorize-security-group-ingress \
+  --group-id <neptune-sg-id> \
+  --protocol tcp \
+  --port 8182 \
+  --source-group <lambda-sg-id> \
+  --description "Allow Lambda SG access to Neptune on port 8182"
+
+```
+In addition, allow outbound traffic on port 8182 to the Neptune DB (by default, all outbound traffic is allowed — verify if restricted).
+
+Use the following CLI command. 
+
+``` bash
+aws ec2 authorize-security-group-egress \
+  --group-id <lambda-sg-id> \
+  --protocol tcp \
+  --port 8182 \
+  --destination-group <neptune-sg-id> \
+  --description "Allow Lambda to send traffic to Neptune on port 8182"
+```
+
 ### Invoke your Lambda function
 
 You can invoke the Lambda function using this CLI command. 
@@ -263,7 +297,6 @@ You will see the following command line message.
 ```
 
 Check the output.log for immediate output, but your logs will be detailed in CloudWatch.
-
  
 ### View CloudWatch Logs
 

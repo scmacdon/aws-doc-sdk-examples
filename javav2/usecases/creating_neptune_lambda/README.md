@@ -247,6 +247,7 @@ aws lambda create-function \
   --vpc-config SubnetIds=subnet-abcdxxxx,subnet-xyz9xxxx,SecurityGroupIds=sg-abc1xxxx
 
 ```
+You're not required to explicitly specify the VPC ID in the **create-function** command. Instead, you specify the subnets and security groups, which together imply the VPC.
 
 ###  verify the Security Group rules
 

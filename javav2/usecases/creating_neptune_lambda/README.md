@@ -46,10 +46,6 @@ To follow along with this tutorial, you need the following:
 + Running this code might result in charges to your AWS account. 
 + Be sure to delete all of the resources that you create during this tutorial so that you won't be charged.
 
-### Creating the resources
-
-Create an S3 bucket that is used to store the Lambda JAR file which is created in a later step. For more information, see [Creating a bucket](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html).
-
 ## Set Up the Amazon Neptune Cluster and VPC
 
 You can use an existing VPC or create a new one. Make sure the VPC has at least two subnets in different Availability Zones (AZs) to support Neptune's high availability and networking requirements.

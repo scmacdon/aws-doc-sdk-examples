@@ -57,7 +57,7 @@ If you're unsure which VPC or subnets to use, you can easily generate the requir
 
  - All necessary networking and security configurations
 
-This is a quick and recommended way to get a working Neptune environment that you can immediately use for this use case.
+This is a quick way to get a working Neptune environment that you can immediately use for this use case.
 
 ### Add data to the database
 

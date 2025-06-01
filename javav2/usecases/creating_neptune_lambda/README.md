@@ -254,7 +254,7 @@ Ensure thay you specify the correct values such as the IAM role and the proper L
 ###  Verify the Security Group rules
 
 To enable communication between your Lambda function and the Neptune database, you must configure the security 
-group rules properly:
+group rules properly.
 
 #### Neptune DB Security Group
 

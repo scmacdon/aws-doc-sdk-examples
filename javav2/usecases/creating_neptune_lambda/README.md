@@ -249,7 +249,9 @@ aws lambda create-function \
 ```
 You're not required to explicitly specify the VPC ID in the **create-function** command. Instead, you specify the subnets and security groups, which together imply the VPC.
 
-###  verify the Security Group rules
+Ensure thay you specify the correct values such as the IAM role and the proper Lambda handler. 
+
+###  Verify the Security Group rules
 
 To enable communication between your Lambda function and the Neptune database, you must configure the security 
 group rules properly:

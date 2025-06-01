@@ -37,7 +37,6 @@ To follow along with this tutorial, you need the following:
 + A Java IDE. (For this tutorial, the IntelliJ IDE is used.)
 + Java 21 JDK.
 + Maven 3.6 or higher.
-+ An S3 bucket used to drploy the Lambda JAR file.  
 
 ### Important
 
@@ -48,7 +47,7 @@ To follow along with this tutorial, you need the following:
 
 ## Set Up the Amazon Neptune Cluster and VPC
 
-You can use an existing VPC or create a new one. Make sure the VPC has at least two subnets in different Availability Zones (AZs) to support Neptune's high availability and networking requirements.
+You need a VPC with at least two subnets in different Availability Zones (AZs) to support Neptune's high availability and networking requirements.
 
 If you don't know a suitable VPC and subnets, you can get them by running the Amazon Neptune Basics scenario available in the AWS Code Library.
 

@@ -153,21 +153,16 @@ package org.example;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.neptunedata.NeptunedataClient;
-import software.amazon.awssdk.services.neptunedata.model.*;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import software.amazon.awssdk.services.neptunedata.model.ExecuteGremlinQueryRequest;
+import software.amazon.awssdk.services.neptunedata.model.ExecuteGremlinQueryResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.net.URI;
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class NeptuneLambdaHandler implements RequestHandler<Map<String, String>, String> {
 
@@ -175,7 +170,7 @@ public class NeptuneLambdaHandler implements RequestHandler<Map<String, String>,
     public String handleRequest(Map<String, String> event, Context context) {
         LambdaLogger logger = context.getLogger();
 
-        String NEPTUNE_ENDPOINT = "https://neptunecluster65.cluster-ro-csf1if1wwrox.us-east-1.neptune.amazonaws.com:8182";
+        String NEPTUNE_ENDPOINT = "<Specify your Endpoint>:8182";
 
         NeptunedataClient neptunedataClient = NeptunedataClient.builder()
                 .region(Region.US_EAST_1)
@@ -197,15 +192,21 @@ public class NeptuneLambdaHandler implements RequestHandler<Map<String, String>,
 
         ExecuteGremlinQueryResponse response = neptunedataClient.executeGremlinQuery(queryRequest);
 
-        System.out.println("Full Response:");
-        System.out.println(response);
+        // Log full response as JSON
+        logger.log("Full Response:\n");
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonResponse = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+            logger.log(jsonResponse + "\n");
+        } catch (Exception e) {
+            logger.log("Failed to serialize response: " + e.getMessage() + "\n");
+        }
 
-        // Retrieve and print the result
+        // Log result specifically
         if (response.result() != null) {
-            System.out.println("Query Result:");
-            System.out.println(response.result().toString());
+            logger.log("Query Result:\n" + response.result().toString() + "\n");
         } else {
-            System.out.println("No result returned from the query.");
+            logger.log("No result returned from the query.\n");
         }
 
         return "Done";

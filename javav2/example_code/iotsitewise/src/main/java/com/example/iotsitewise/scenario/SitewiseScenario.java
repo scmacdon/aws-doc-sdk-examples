@@ -341,7 +341,7 @@ public class SitewiseScenario {
             }
 
             try {
-                sitewiseActions.deleteGatewayAsync(gatewayId).join();
+                sitewiseActions.Async(gatewayId).join();
                 logger.info("Gateway {} was deleted successfully.", gatewayId);
             } catch (CompletionException ce) {
                 Throwable cause = ce.getCause();

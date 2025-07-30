@@ -67,7 +67,7 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>iam</artifactId>
         </dependency>
-            <dependency>
+         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>eventbridge</artifactId>
        </dependency>

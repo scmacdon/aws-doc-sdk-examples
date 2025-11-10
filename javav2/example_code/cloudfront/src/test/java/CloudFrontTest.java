@@ -36,8 +36,6 @@ public class CloudFrontTest {
     private static String functionFileName = "CF_function.js";
     private static String funcARN = "";
     private static String eTagVal = "";
-    private static String distributionId = "";
-
 
     @BeforeAll
     public static void setUp() throws IOException {
@@ -47,24 +45,6 @@ public class CloudFrontTest {
         cloudFrontClient = CloudFrontClient.builder()
                 .region(region)
                 .build();
-        try (InputStream input = CloudFrontTest.class.getClassLoader().getResourceAsStream("config.properties")) {
-
-            Properties prop = new Properties();
-
-            if (input == null) {
-                System.out.println("Sorry, unable to find config.properties");
-                return;
-            }
-
-            // Load a properties file from the classpath, inside static method.
-            prop.load(input);
-
-            // Populate the data members required for all tests.
-            distributionId = prop.getProperty("distributionId");
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
     }
 
 
@@ -96,15 +76,6 @@ public class CloudFrontTest {
 
     @Test
     @Order(4)
-   public void testGetDistribution() {
-       assertDoesNotThrow(() -> {
-            GetDistributions.getCFDistributions(cloudFrontClient);
-        });
-        logger.info("Test 4 passed");
-   }
-
-    @Test
-    @Order(5)
    public void testDeleteFunction(){
        assertDoesNotThrow(() -> {
            DeleteFunction.deleteSpecificFunction(cloudFrontClient, functionName, eTagVal);

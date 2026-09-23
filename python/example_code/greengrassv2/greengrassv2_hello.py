@@ -56,9 +56,7 @@ def hello_greengrassv2() -> None:
             "Error listing core devices: %s",
             err.response["Error"]["Message"],
         )
-        print(
-            f"Service error: {err.response['Error']['Message']}"
-        )
+        print(f"Service error: {err.response['Error']['Message']}")
         raise
 
 

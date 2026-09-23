@@ -11,46 +11,16 @@ cleaned up in finally blocks to prevent leaks.
 Run with:  pytest test_greengrassv2_basics.py -v
 """
 
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import json
-import time
-import uuid
 
-import boto3
 import pytest
 from botocore.exceptions import ClientError
 
-from greengrassv2_wrapper import GreengrassV2Wrapper
+# Fixtures (greengrassv2_client, iot_client, wrapper, unique_suffix) and the
+# sys.path setup that makes `greengrassv2_wrapper` importable are provided by
+# conftest.py in this directory.
 
 COMPONENT_NAME = "com.example.GreengrassBasicsTest"
-
-
-@pytest.fixture(scope="module")
-def greengrassv2_client():
-    """Create a shared Greengrass V2 client for all tests."""
-    return boto3.client("greengrassv2")
-
-
-@pytest.fixture(scope="module")
-def iot_client():
-    """Create a shared IoT client for thing group management."""
-    return boto3.client("iot")
-
-
-@pytest.fixture(scope="module")
-def wrapper(greengrassv2_client):
-    """Create a wrapper instance for all tests."""
-    return GreengrassV2Wrapper(greengrassv2_client)
-
-
-@pytest.fixture(scope="module")
-def unique_suffix():
-    """Generate a unique suffix used across the test module."""
-    return str(uuid.uuid4())[:8]
 
 
 def _build_test_recipe(version: str, suffix: str) -> dict:
@@ -62,16 +32,12 @@ def _build_test_recipe(version: str, suffix: str) -> dict:
         "ComponentDescription": f"Test component v{version}",
         "ComponentPublisher": "Integration Tests",
         "ComponentConfiguration": {
-            "DefaultConfiguration": {
-                "Message": f"Test message v{version}"
-            }
+            "DefaultConfiguration": {"Message": f"Test message v{version}"}
         },
         "Manifests": [
             {
                 "Platform": {"os": "linux"},
-                "Lifecycle": {
-                    "run": 'echo "{configuration:/Message}"'
-                },
+                "Lifecycle": {"run": 'echo "{configuration:/Message}"'},
             }
         ],
     }
@@ -121,7 +87,7 @@ class TestGreengrassV2Wrapper:
             assert response_v2.get("componentVersion") == "2.0.0"
 
             # Derive component ARN (without version) for listing
-            component_arn = v1_arn.rsplit(":versions:", 1)[0]
+            component_arn = wrapper.component_arn_from_version_arn(v1_arn)
 
             # List component versions
             versions = wrapper.list_component_versions(component_arn)
@@ -176,9 +142,7 @@ class TestGreengrassV2Wrapper:
 
         try:
             # Create a thing group
-            tg_response = iot_client.create_thing_group(
-                thingGroupName=thing_group_name
-            )
+            tg_response = iot_client.create_thing_group(thingGroupName=thing_group_name)
             thing_group_arn = tg_response["thingGroupArn"]
 
             # Create a component for deployment
@@ -194,17 +158,16 @@ class TestGreengrassV2Wrapper:
                 "Manifests": [
                     {
                         "Platform": {"os": "linux"},
-                        "Lifecycle": {
-                            "run": 'echo "{configuration:/Message}"'
-                        },
+                        "Lifecycle": {"run": 'echo "{configuration:/Message}"'},
                     }
                 ],
             }
             comp_response = wrapper.create_component_version(recipe)
             comp_arn = comp_response.get("arn")
 
-            # Allow time for the component to become DEPLOYABLE
-            time.sleep(3)
+            # Wait for the component to become DEPLOYABLE using a bounded poll
+            # instead of a fixed sleep.
+            wrapper.wait_for_component_deployable(comp_arn)
 
             # Create a deployment
             components = {
@@ -262,9 +225,7 @@ class TestGreengrassV2Wrapper:
                     pass
             if thing_group_name is not None:
                 try:
-                    iot_client.delete_thing_group(
-                        thingGroupName=thing_group_name
-                    )
+                    iot_client.delete_thing_group(thingGroupName=thing_group_name)
                 except ClientError:
                     pass
 

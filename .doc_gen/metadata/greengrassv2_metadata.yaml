@@ -1,7 +1,7 @@
 greengrassv2_Hello:
-  title: Hello &IoTGGV2;
-  title_abbrev: Hello &IoTGGV2;
-  synopsis: get started using &IoTGGV2;.
+  title: Hello &GG2;
+  title_abbrev: Hello &GG2;
+  synopsis: get started using &GG2;.
   category: Hello
   languages:
     Python:
@@ -15,9 +15,9 @@ greengrassv2_Hello:
   services:
     greengrassv2: {ListCoreDevices}
 greengrassv2_ListCoreDevices:
-  title: List &IoTGGV2; core devices using an &AWS; SDK
+  title: List &GG2; core devices using an &AWS; SDK
   title_abbrev: List core devices
-  synopsis: list &IoTGGV2; core devices.
+  synopsis: list &GG2; core devices.
   category: Actions
   languages:
     Python:
@@ -31,9 +31,9 @@ greengrassv2_ListCoreDevices:
   services:
     greengrassv2: {ListCoreDevices}
 greengrassv2_CreateComponentVersion:
-  title: Create an &IoTGGV2; component version using an &AWS; SDK
+  title: Create an &GG2; component version using an &AWS; SDK
   title_abbrev: Create a component version
-  synopsis: create an &IoTGGV2; component version from an inline recipe.
+  synopsis: create an &GG2; component version from an inline recipe.
   category: Actions
   languages:
     Python:
@@ -47,9 +47,9 @@ greengrassv2_CreateComponentVersion:
   services:
     greengrassv2: {CreateComponentVersion}
 greengrassv2_ListComponentVersions:
-  title: List &IoTGGV2; component versions using an &AWS; SDK
+  title: List &GG2; component versions using an &AWS; SDK
   title_abbrev: List component versions
-  synopsis: list all versions of an &IoTGGV2; component.
+  synopsis: list all versions of an &GG2; component.
   category: Actions
   languages:
     Python:
@@ -63,9 +63,9 @@ greengrassv2_ListComponentVersions:
   services:
     greengrassv2: {ListComponentVersions}
 greengrassv2_GetComponent:
-  title: Get an &IoTGGV2; component recipe using an &AWS; SDK
+  title: Get an &GG2; component recipe using an &AWS; SDK
   title_abbrev: Get a component recipe
-  synopsis: get the recipe for an &IoTGGV2; component version.
+  synopsis: get the recipe for an &GG2; component version.
   category: Actions
   languages:
     Python:
@@ -79,9 +79,9 @@ greengrassv2_GetComponent:
   services:
     greengrassv2: {GetComponent}
 greengrassv2_DescribeComponent:
-  title: Describe an &IoTGGV2; component using an &AWS; SDK
+  title: Describe an &GG2; component using an &AWS; SDK
   title_abbrev: Describe a component
-  synopsis: retrieve metadata for an &IoTGGV2; component version.
+  synopsis: retrieve metadata for an &GG2; component version.
   category: Actions
   languages:
     Python:
@@ -95,9 +95,9 @@ greengrassv2_DescribeComponent:
   services:
     greengrassv2: {DescribeComponent}
 greengrassv2_CreateDeployment:
-  title: Create an &IoTGGV2; deployment using an &AWS; SDK
+  title: Create an &GG2; deployment using an &AWS; SDK
   title_abbrev: Create a deployment
-  synopsis: create an &IoTGGV2; deployment to a thing group.
+  synopsis: create an &GG2; deployment to a thing group.
   category: Actions
   languages:
     Python:
@@ -111,9 +111,9 @@ greengrassv2_CreateDeployment:
   services:
     greengrassv2: {CreateDeployment}
 greengrassv2_GetDeployment:
-  title: Get &IoTGGV2; deployment details using an &AWS; SDK
+  title: Get &GG2; deployment details using an &AWS; SDK
   title_abbrev: Get deployment details
-  synopsis: get details of an &IoTGGV2; deployment.
+  synopsis: get details of an &GG2; deployment.
   category: Actions
   languages:
     Python:
@@ -127,9 +127,9 @@ greengrassv2_GetDeployment:
   services:
     greengrassv2: {GetDeployment}
 greengrassv2_ListDeployments:
-  title: List &IoTGGV2; deployments using an &AWS; SDK
+  title: List &GG2; deployments using an &AWS; SDK
   title_abbrev: List deployments
-  synopsis: list &IoTGGV2; deployments for a target.
+  synopsis: list &GG2; deployments for a target.
   category: Actions
   languages:
     Python:
@@ -143,9 +143,9 @@ greengrassv2_ListDeployments:
   services:
     greengrassv2: {ListDeployments}
 greengrassv2_CancelDeployment:
-  title: Cancel an &IoTGGV2; deployment using an &AWS; SDK
+  title: Cancel an &GG2; deployment using an &AWS; SDK
   title_abbrev: Cancel a deployment
-  synopsis: cancel an active &IoTGGV2; deployment.
+  synopsis: cancel an active &GG2; deployment.
   category: Actions
   languages:
     Python:
@@ -159,9 +159,9 @@ greengrassv2_CancelDeployment:
   services:
     greengrassv2: {CancelDeployment}
 greengrassv2_DeleteComponent:
-  title: Delete an &IoTGGV2; component using an &AWS; SDK
+  title: Delete an &GG2; component using an &AWS; SDK
   title_abbrev: Delete a component
-  synopsis: delete a version of an &IoTGGV2; component.
+  synopsis: delete a version of an &GG2; component.
   category: Actions
   languages:
     Python:
@@ -175,9 +175,9 @@ greengrassv2_DeleteComponent:
   services:
     greengrassv2: {DeleteComponent}
 greengrassv2_Scenario:
-  title: Learn &IoTGGV2; core operations using an &AWS; SDK
-  title_abbrev: Learn &IoTGGV2; basics
-  synopsis: learn core operations of &IoTGGV2; using an &AWS; SDK.
+  title: Learn &GG2; core operations using an &AWS; SDK
+  title_abbrev: Learn &GG2; basics
+  synopsis: learn core operations of &GG2; using an &AWS; SDK.
   synopsis_list:
     - List Greengrass core devices.
     - Create and version custom components from inline recipes.
@@ -197,7 +197,7 @@ greengrassv2_Scenario:
             - description: Run an interactive scenario at a command prompt.
               snippet_tags:
                 - python.example_code.greengrassv2.GreengrassV2Scenario
-            - description: Create a class that wraps &IoTGGV2; operations.
+            - description: Create a class that wraps &GG2; operations.
               snippet_tags:
                 - python.example_code.greengrassv2.GreengrassV2Wrapper.decl
   services:

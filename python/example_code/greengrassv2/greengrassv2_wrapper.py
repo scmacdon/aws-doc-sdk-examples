@@ -9,9 +9,9 @@ Greengrass V2 operations including component creation, versioning, deployment,
 and lifecycle management.
 """
 
-import base64
 import json
 import logging
+import time
 from typing import Any, Optional
 
 import boto3
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class GreengrassV2Wrapper:
     """Encapsulates AWS IoT Greengrass V2 operations."""
 
-    def __init__(self, greengrassv2_client: boto3.client) -> None:
+    def __init__(self, greengrassv2_client: Any) -> None:
         """
         Initializes the GreengrassV2Wrapper with a Greengrass V2 client.
 
@@ -32,12 +32,42 @@ class GreengrassV2Wrapper:
         """
         self.client = greengrassv2_client
 
+    @classmethod
+    def from_client(cls) -> "GreengrassV2Wrapper":
+        """
+        Instantiates the wrapper with a default Boto3 Greengrass V2 client.
+
+        :return: An instance of GreengrassV2Wrapper.
+        """
+        greengrassv2_client = boto3.client("greengrassv2")
+        return cls(greengrassv2_client)
+
+    @staticmethod
+    def component_arn_from_version_arn(component_version_arn: str) -> str:
+        """
+        Derives the version-less component ARN from a component *version* ARN.
+
+        A component version ARN has the form::
+
+            arn:aws:greengrass:<region>:<account-id>:components:<name>:versions:<version>
+
+        The ``list_component_versions`` API expects the version-less form::
+
+            arn:aws:greengrass:<region>:<account-id>:components:<name>
+
+        This helper splits on the ``:versions:`` delimiter. If the delimiter is
+        not present (the input is already version-less, or has an unexpected
+        shape), the original ARN is returned unchanged as a safe fallback.
+
+        :param component_version_arn: A component version ARN.
+        :return: The version-less component ARN.
+        """
+        return component_version_arn.rsplit(":versions:", 1)[0]
+
     # snippet-end:[python.example_code.greengrassv2.GreengrassV2Wrapper.decl]
 
     # snippet-start:[python.example_code.greengrassv2.ListCoreDevices]
-    def list_core_devices(
-        self, status: Optional[str] = None
-    ) -> list[dict[str, Any]]:
+    def list_core_devices(self, status: Optional[str] = None) -> list[dict[str, Any]]:
         """
         Lists Greengrass core devices registered in the account.
         Uses a paginator to handle large result sets.
@@ -63,6 +93,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.ListCoreDevices]
 
     # snippet-start:[python.example_code.greengrassv2.CreateComponentVersion]
@@ -97,6 +128,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.CreateComponentVersion]
 
     # snippet-start:[python.example_code.greengrassv2.ListComponentVersions]
@@ -125,6 +157,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.ListComponentVersions]
 
     # snippet-start:[python.example_code.greengrassv2.GetComponent]
@@ -143,9 +176,7 @@ class GreengrassV2Wrapper:
                 arn=component_version_arn,
                 recipeOutputFormat=recipe_output_format,
             )
-            logger.info(
-                "Retrieved component recipe for %s.", component_version_arn
-            )
+            logger.info("Retrieved component recipe for %s.", component_version_arn)
             return response
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -154,12 +185,11 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.GetComponent]
 
     # snippet-start:[python.example_code.greengrassv2.DescribeComponent]
-    def describe_component(
-        self, component_version_arn: str
-    ) -> dict[str, Any]:
+    def describe_component(self, component_version_arn: str) -> dict[str, Any]:
         """
         Retrieves metadata for a specific component version.
 
@@ -181,7 +211,46 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.DescribeComponent]
+
+    def wait_for_component_deployable(
+        self,
+        component_version_arn: str,
+        max_attempts: int = 20,
+        delay_seconds: float = 2.0,
+    ) -> bool:
+        """
+        Polls a component version until it reaches the DEPLOYABLE state.
+
+        This replaces fixed sleeps with a bounded polling loop so callers do not
+        rely on a component becoming ready within an arbitrary fixed time.
+
+        :param component_version_arn: The ARN of the specific component version.
+        :param max_attempts: Maximum number of polling attempts.
+        :param delay_seconds: Delay between polling attempts, in seconds.
+        :return: True if the component became DEPLOYABLE within the timeout;
+                 otherwise False.
+        """
+        for _ in range(max_attempts):
+            response = self.describe_component(component_version_arn)
+            state = response.get("status", dict()).get("componentState")
+            if state == "DEPLOYABLE":
+                return True
+            if state in ("FAILED", "BROKEN"):
+                logger.error(
+                    "Component %s entered terminal state %s.",
+                    component_version_arn,
+                    state,
+                )
+                return False
+            time.sleep(delay_seconds)
+        logger.warning(
+            "Component %s did not become DEPLOYABLE within %d attempts.",
+            component_version_arn,
+            max_attempts,
+        )
+        return False
 
     # snippet-start:[python.example_code.greengrassv2.CreateDeployment]
     def create_deployment(
@@ -222,6 +291,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.CreateDeployment]
 
     # snippet-start:[python.example_code.greengrassv2.GetDeployment]
@@ -247,6 +317,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.GetDeployment]
 
     # snippet-start:[python.example_code.greengrassv2.ListDeployments]
@@ -282,6 +353,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.ListDeployments]
 
     # snippet-start:[python.example_code.greengrassv2.CancelDeployment]
@@ -304,6 +376,7 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.CancelDeployment]
 
     # snippet-start:[python.example_code.greengrassv2.DeleteComponent]
@@ -324,4 +397,5 @@ class GreengrassV2Wrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.greengrassv2.DeleteComponent]

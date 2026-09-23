@@ -25,10 +25,18 @@ cloud-side management API operations.
 
 import json
 import logging
+import os
+import sys
 import uuid
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
+
+# Add the repo's `python` folder to the path so demo_tools can be imported
+# without a package install, matching the pattern used by comparable examples.
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+from demo_tools import question as q
 
 from greengrassv2_wrapper import GreengrassV2Wrapper
 
@@ -45,7 +53,7 @@ class GreengrassV2Scenario:
     def __init__(
         self,
         greengrassv2_wrapper: GreengrassV2Wrapper,
-        iot_client: boto3.client,
+        iot_client: Any,
     ) -> None:
         """
         :param greengrassv2_wrapper: An instance of GreengrassV2Wrapper.
@@ -73,21 +81,44 @@ class GreengrassV2Scenario:
         try:
             self._setup()
             self._step1_list_core_devices()
+            self._pause()
             self._step2_create_component_v1()
+            self._pause()
             self._step3_create_component_v2()
+            self._pause()
             self._step4_list_component_versions()
+            self._pause()
             self._step5_get_component_recipe()
+            self._pause()
             self._step6_describe_component()
+            self._pause()
             self._step7_create_deployment()
+            self._pause()
             self._step8_get_deployment()
+            self._pause()
             self._step9_list_deployments()
+            self._pause()
             self._step10_cancel_deployment()
         finally:
-            self._cleanup()
+            if q.ask(
+                "\nDo you want to delete the resources created by this scenario (y/n)? ",
+                q.is_yesno,
+            ):
+                self._cleanup()
+            else:
+                print(
+                    "Skipping cleanup. Remember to delete the components and thing "
+                    "group manually to avoid leaving unused resources."
+                )
 
         print(DASHES)
         print("AWS IoT Greengrass V2 Basics scenario complete!")
         print(DASHES)
+
+    @staticmethod
+    def _pause() -> None:
+        """Pauses between steps so the user can review the output."""
+        q.ask("\nPress Enter to continue...")
 
     def _setup(self) -> None:
         """Creates an IoT thing group used as the deployment target."""
@@ -161,15 +192,11 @@ class GreengrassV2Scenario:
                 else "Enhanced sample component for Greengrass Basics scenario"
             ),
             "ComponentPublisher": "AWS Code Examples",
-            "ComponentConfiguration": {
-                "DefaultConfiguration": default_config
-            },
+            "ComponentConfiguration": {"DefaultConfiguration": default_config},
             "Manifests": [
                 {
                     "Platform": {"os": "linux"},
-                    "Lifecycle": {
-                        "run": 'echo "{configuration:/Message}"'
-                    },
+                    "Lifecycle": {"run": 'echo "{configuration:/Message}"'},
                 }
             ],
         }
@@ -187,10 +214,9 @@ class GreengrassV2Scenario:
         response = self.wrapper.create_component_version(recipe)
 
         self.v1_arn = response.get("arn")
-        # Derive the component ARN (without version) for listing versions
-        # Format: arn:aws:greengrass:<region>:<account>:components:<name>
-        arn_parts = self.v1_arn.rsplit(":versions:", 1)
-        self.component_arn = arn_parts[0] if len(arn_parts) == 2 else self.v1_arn
+        # Derive the version-less component ARN (used to list all versions).
+        # See GreengrassV2Wrapper.component_arn_from_version_arn for the format.
+        self.component_arn = self.wrapper.component_arn_from_version_arn(self.v1_arn)
 
         print("Component created successfully!")
         print(f"  ARN: {self.v1_arn}")
@@ -305,9 +331,7 @@ class GreengrassV2Scenario:
             COMPONENT_NAME: {
                 "componentVersion": "2.0.0",
                 "configurationUpdate": {
-                    "merge": json.dumps(
-                        {"Message": "Custom message from deployment"}
-                    )
+                    "merge": json.dumps({"Message": "Custom message from deployment"})
                 },
             }
         }
@@ -362,9 +386,7 @@ class GreengrassV2Scenario:
             print("\n  Components:")
             for comp_name, comp_config in components.items():
                 print(f"    {comp_name}:")
-                print(
-                    f"      Version: {comp_config.get('componentVersion', 'N/A')}"
-                )
+                print(f"      Version: {comp_config.get('componentVersion', 'N/A')}")
                 config_update = comp_config.get("configurationUpdate", dict())
                 merge_val = config_update.get("merge", None)
                 if merge_val is not None:
@@ -402,17 +424,13 @@ class GreengrassV2Scenario:
         )
 
         group_name = self.thing_group_name or "unknown"
-        print(
-            f"Found {len(deployments)} deployment(s) targeting {group_name}:"
-        )
+        print(f"Found {len(deployments)} deployment(s) targeting {group_name}:")
         for idx, dep in enumerate(deployments, 1):
             print(f"  {idx}. {dep.get('deploymentName', 'N/A')}")
             print(f"     ID: {dep.get('deploymentId')}")
             print(f"     Status: {dep.get('deploymentStatus')}")
             print(f"     Created: {dep.get('creationTimestamp')}")
-            print(
-                f"     Latest for target: {dep.get('isLatestForTarget', 'N/A')}"
-            )
+            print(f"     Latest for target: {dep.get('isLatestForTarget', 'N/A')}")
 
         print(DASHES)
 
@@ -477,9 +495,7 @@ class GreengrassV2Scenario:
                     f"Deleting IoT thing group {self.thing_group_name}...",
                     end=" ",
                 )
-                self.iot_client.delete_thing_group(
-                    thingGroupName=self.thing_group_name
-                )
+                self.iot_client.delete_thing_group(thingGroupName=self.thing_group_name)
                 print("Done.")
             except ClientError as err:
                 error_code = err.response["Error"]["Code"]
@@ -500,7 +516,10 @@ def main() -> None:
     iot_client = boto3.client("iot")
     wrapper = GreengrassV2Wrapper(greengrassv2_client)
     scenario = GreengrassV2Scenario(wrapper, iot_client)
-    scenario.run_scenario()
+    try:
+        scenario.run_scenario()
+    except Exception:
+        logging.exception("Something went wrong running the scenario.")
 
 
 if __name__ == "__main__":

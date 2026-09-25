@@ -2,407 +2,257 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Unit tests for the Amazon Kinesis Data Streams basics scenario.
-These tests use botocore.stub.Stubber to mock all AWS API calls —
-no real AWS credentials or network access required.
+Unit tests for kinesis_wrapper.py.
 
-Run with:  pytest test_kinesis_basics.py -v
+These tests follow the standard Python example test pattern: they use the
+``make_stubber`` fixture (from ``test_tools`` via conftest.py) together with
+the shared ``KinesisStubber`` to intercept AWS calls. Each test is
+parametrized to exercise both the success path (``error_code=None``) and the
+error path (``error_code="TestException"``).
 """
 
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import json
-from datetime import datetime, timezone
-
 import boto3
+from botocore.exceptions import ClientError
 import pytest
-from botocore.stub import Stubber
 
 from kinesis_wrapper import KinesisStreamWrapper
 
-
-STREAM_NAME = "unit-test-stream"
-STREAM_ARN = "arn:aws:kinesis:us-east-1:123456789012:stream/unit-test-stream"
-SHARD_ID_0 = "shardId-000000000000"
-SHARD_ID_1 = "shardId-000000000001"
-SHARD_ITERATOR = (
-    "AAAAAAAAAAETYyAYzd665+8e0X7JTsASDM/Hr2rSwc0X2qz93iuA3udrjTH+ikQvpQk/1ZcMML"
-)
-NEXT_SHARD_ITERATOR = (
-    "AAAAAAAAAT+8e0X7JTsASDM/Hr2rSwc0X2qz93iuA3udrjTH+ikQvpQk/1ZcMMLzRdAesqBBBB"
-)
-SEQUENCE_NUMBER = "49590338271490256608559692538361571095921575989136588898"
+STREAM_NAME = "test-stream"
+STREAM_ARN = f"arn:aws:kinesis:us-east-1:123456789012:stream/{STREAM_NAME}"
+SHARD_ID = "shardId-000000000000"
+SHARD_ITERATOR = "test-shard-iterator"
 
 
-def _describe_stream_response(status="ACTIVE"):
-    """Build a valid DescribeStream response with all required fields."""
-    return {
-        "StreamDescription": {
-            "StreamName": STREAM_NAME,
-            "StreamARN": STREAM_ARN,
-            "StreamStatus": status,
-            "StreamModeDetails": {"StreamMode": "PROVISIONED"},
-            "Shards": [
-                {
-                    "ShardId": SHARD_ID_0,
-                    "HashKeyRange": {
-                        "StartingHashKey": "0",
-                        "EndingHashKey": "170141183460469231731687303715884105727",
-                    },
-                    "SequenceNumberRange": {
-                        "StartingSequenceNumber": "49590338271490256608559692538361571095921575989136588898",
-                    },
-                },
-                {
-                    "ShardId": SHARD_ID_1,
-                    "HashKeyRange": {
-                        "StartingHashKey": "170141183460469231731687303715884105728",
-                        "EndingHashKey": "340282366920938463463374607431768211455",
-                    },
-                    "SequenceNumberRange": {
-                        "StartingSequenceNumber": "49590338271512557353757223161502106818841590619171160066",
-                    },
-                },
-            ],
-            "HasMoreShards": False,
-            "RetentionPeriodHours": 24,
-            "StreamCreationTimestamp": datetime(2024, 1, 1, tzinfo=timezone.utc),
-            "EnhancedMonitoring": [
-                {"ShardLevelMetrics": ["IncomingBytes", "OutgoingRecords"]}
-            ],
-            "EncryptionType": "NONE",
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_list_streams(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    limit = 10
+    stream_names = ["stream-1", "stream-2"]
+
+    kinesis_stubber.stub_list_streams(limit, stream_names, error_code=error_code)
+
+    if error_code is None:
+        response = wrapper.list_streams(limit=limit)
+        assert response["StreamNames"] == stream_names
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.list_streams(limit=limit)
+        assert exc_info.value.response["Error"]["Code"] == error_code
+
+
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_create_stream(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    shard_count = 2
+
+    kinesis_stubber.stub_create_stream(
+        STREAM_NAME,
+        shard_count=shard_count,
+        stream_mode="PROVISIONED",
+        error_code=error_code,
+    )
+
+    if error_code is None:
+        wrapper.create_stream(STREAM_NAME, shard_count=shard_count)
+        assert wrapper.name == STREAM_NAME
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.create_stream(STREAM_NAME, shard_count=shard_count)
+        assert exc_info.value.response["Error"]["Code"] == error_code
+
+
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_describe_stream(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+
+    kinesis_stubber.stub_describe_stream(
+        STREAM_NAME, STREAM_ARN, "ACTIVE", error_code=error_code
+    )
+
+    if error_code is None:
+        details = wrapper.describe_stream(STREAM_NAME)
+        assert details["StreamName"] == STREAM_NAME
+        assert details["StreamStatus"] == "ACTIVE"
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.describe_stream(STREAM_NAME)
+        assert exc_info.value.response["Error"]["Code"] == error_code
+
+
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_wait_for_stream_active(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+
+    kinesis_stubber.stub_describe_stream(
+        STREAM_NAME, STREAM_ARN, "ACTIVE", error_code=error_code
+    )
+
+    if error_code is None:
+        details = wrapper.wait_for_stream_active(STREAM_NAME, max_wait_seconds=5)
+        assert details["StreamStatus"] == "ACTIVE"
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.wait_for_stream_active(STREAM_NAME, max_wait_seconds=5)
+        assert exc_info.value.response["Error"]["Code"] == error_code
+
+
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_put_record(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    data = {"sensor_id": "sensor-1", "temperature": 22.5}
+    partition_key = "sensor-1"
+
+    kinesis_stubber.stub_put_record(
+        STREAM_NAME, data, partition_key, error_code=error_code
+    )
+
+    if error_code is None:
+        response = wrapper.put_record(STREAM_NAME, data, partition_key)
+        assert "SequenceNumber" in response
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.put_record(STREAM_NAME, data, partition_key)
+        assert exc_info.value.response["Error"]["Code"] == error_code
+
+
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_put_records(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    records = [
+        {
+            "Data": {"sensor_id": f"sensor-{i}", "value": i * 10},
+            "PartitionKey": f"pk-{i}",
         }
-    }
+        for i in range(5)
+    ]
+
+    kinesis_stubber.stub_put_records_batch(STREAM_NAME, records, error_code=error_code)
+
+    if error_code is None:
+        response = wrapper.put_records(STREAM_NAME, records)
+        assert len(response["Records"]) == len(records)
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.put_records(STREAM_NAME, records)
+        assert exc_info.value.response["Error"]["Code"] == error_code
 
 
-class TestKinesisBasicsIntegration:
-    """Unit tests for the Kinesis Data Streams basics scenario using Stubber."""
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_get_shard_iterator(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
 
-    def test_full_scenario(self):
-        """
-        Tests the complete Kinesis basics scenario end-to-end using Stubber:
-        list, create, describe, put record, put records, get shard iterator,
-        get records, describe summary, update shard count, describe (after
-        scaling), and delete.
-        """
-        client = boto3.client("kinesis", region_name="us-east-1")
-        stubber = Stubber(client)
+    kinesis_stubber.stub_get_shard_iterator(
+        STREAM_NAME,
+        SHARD_ID,
+        SHARD_ITERATOR,
+        iterator_type="TRIM_HORIZON",
+        error_code=error_code,
+    )
 
-        # 1. ListStreams
-        stubber.add_response(
-            "list_streams",
-            {
-                "StreamNames": ["existing-stream"],
-                "HasMoreStreams": False,
-                "StreamSummaries": [
-                    {
-                        "StreamName": "existing-stream",
-                        "StreamARN": "arn:aws:kinesis:us-east-1:123456789012:stream/existing-stream",
-                        "StreamStatus": "ACTIVE",
-                        "StreamModeDetails": {"StreamMode": "ON_DEMAND"},
-                        "StreamCreationTimestamp": datetime(2024, 1, 1, tzinfo=timezone.utc),
-                    }
-                ],
-            },
-            {"Limit": 10},
+    if error_code is None:
+        shard_iterator = wrapper.get_shard_iterator(
+            STREAM_NAME, SHARD_ID, iterator_type="TRIM_HORIZON"
         )
-
-        # 2. CreateStream
-        stubber.add_response(
-            "create_stream",
-            {},
-            {
-                "StreamName": STREAM_NAME,
-                "ShardCount": 2,
-                "StreamModeDetails": {"StreamMode": "PROVISIONED"},
-            },
-        )
-
-        # 3. DescribeStream — wait for ACTIVE
-        stubber.add_response(
-            "describe_stream",
-            _describe_stream_response("ACTIVE"),
-            {"StreamName": STREAM_NAME},
-        )
-
-        # 4. PutRecord — single record
-        sensor_payload = {
-            "sensor_id": "sensor-1",
-            "temperature": 22.5,
-            "test": True,
-        }
-        stubber.add_response(
-            "put_record",
-            {
-                "ShardId": SHARD_ID_0,
-                "SequenceNumber": SEQUENCE_NUMBER,
-                "EncryptionType": "NONE",
-            },
-            {
-                "StreamName": STREAM_NAME,
-                "Data": json.dumps(sensor_payload),
-                "PartitionKey": "sensor-1",
-            },
-        )
-
-        # 5. PutRecords — batch of 5 records
-        # Build the exact records the wrapper will produce
-        batch_records_input = list()
-        for i in range(5):
-            batch_records_input.append(
-                {
-                    "Data": {"sensor_id": f"sensor-{i}", "value": i * 10},
-                    "PartitionKey": f"sensor-{i % 3}",
-                }
+        assert shard_iterator == SHARD_ITERATOR
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.get_shard_iterator(
+                STREAM_NAME, SHARD_ID, iterator_type="TRIM_HORIZON"
             )
-        expected_put_records_request = list()
-        for rec in batch_records_input:
-            expected_put_records_request.append(
-                {
-                    "Data": json.dumps(rec["Data"]),
-                    "PartitionKey": rec["PartitionKey"],
-                }
-            )
-        # Note: FailedRecordCount has min value 1 per the API spec, so we
-        # OMIT it from the response when all records succeed. The wrapper
-        # uses .get("FailedRecordCount", 0) which handles the absent key.
-        put_records_response_entries = list()
-        for i in range(5):
-            put_records_response_entries.append(
-                {
-                    "SequenceNumber": f"4959033827149025660855969253836157109592157598913{i}",
-                    "ShardId": SHARD_ID_0 if i % 2 == 0 else SHARD_ID_1,
-                }
-            )
-        stubber.add_response(
-            "put_records",
-            {
-                "Records": put_records_response_entries,
-                "EncryptionType": "NONE",
-            },
-            {
-                "StreamName": STREAM_NAME,
-                "Records": expected_put_records_request,
-            },
-        )
+        assert exc_info.value.response["Error"]["Code"] == error_code
 
-        # 6. GetShardIterator
-        stubber.add_response(
-            "get_shard_iterator",
-            {"ShardIterator": SHARD_ITERATOR},
-            {
-                "StreamName": STREAM_NAME,
-                "ShardId": SHARD_ID_0,
-                "ShardIteratorType": "TRIM_HORIZON",
-            },
-        )
 
-        # 7. GetRecords
-        record_data = json.dumps(
-            {"sensor_id": "sensor-1", "temperature": 22.5, "test": True}
-        ).encode("utf-8")
-        stubber.add_response(
-            "get_records",
-            {
-                "Records": [
-                    {
-                        "SequenceNumber": SEQUENCE_NUMBER,
-                        "ApproximateArrivalTimestamp": datetime(
-                            2024, 6, 15, 12, 0, 0, tzinfo=timezone.utc
-                        ),
-                        "Data": record_data,
-                        "PartitionKey": "sensor-1",
-                    }
-                ],
-                "NextShardIterator": NEXT_SHARD_ITERATOR,
-                "MillisBehindLatest": 0,
-            },
-            {"ShardIterator": SHARD_ITERATOR, "Limit": 10},
-        )
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_get_records(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    limit = 10
+    records = ["record-1", "record-2"]
 
-        # 8. DescribeStreamSummary
-        stubber.add_response(
-            "describe_stream_summary",
-            {
-                "StreamDescriptionSummary": {
-                    "StreamName": STREAM_NAME,
-                    "StreamARN": STREAM_ARN,
-                    "StreamStatus": "ACTIVE",
-                    "StreamModeDetails": {"StreamMode": "PROVISIONED"},
-                    "RetentionPeriodHours": 24,
-                    "StreamCreationTimestamp": datetime(
-                        2024, 1, 1, tzinfo=timezone.utc
-                    ),
-                    "EnhancedMonitoring": [
-                        {"ShardLevelMetrics": ["IncomingBytes", "OutgoingRecords"]}
-                    ],
-                    "EncryptionType": "NONE",
-                    "OpenShardCount": 2,
-                }
-            },
-            {"StreamName": STREAM_NAME},
-        )
+    kinesis_stubber.stub_get_records(
+        SHARD_ITERATOR, limit, records, error_code=error_code
+    )
 
-        # 9. UpdateShardCount
-        stubber.add_response(
-            "update_shard_count",
-            {
-                "StreamName": STREAM_NAME,
-                "CurrentShardCount": 2,
-                "TargetShardCount": 4,
-                "StreamARN": STREAM_ARN,
-            },
-            {
-                "StreamName": STREAM_NAME,
-                "TargetShardCount": 4,
-                "ScalingType": "UNIFORM_SCALING",
-            },
-        )
+    if error_code is None:
+        response = wrapper.get_records(SHARD_ITERATOR, limit=limit)
+        assert len(response["Records"]) == len(records)
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.get_records(SHARD_ITERATOR, limit=limit)
+        assert exc_info.value.response["Error"]["Code"] == error_code
 
-        # 10. DescribeStream again — after scaling, wait for ACTIVE
-        stubber.add_response(
-            "describe_stream",
-            _describe_stream_response("ACTIVE"),
-            {"StreamName": STREAM_NAME},
-        )
 
-        # 11. DeleteStream
-        stubber.add_response(
-            "delete_stream",
-            {},
-            {
-                "StreamName": STREAM_NAME,
-                "EnforceConsumerDeletion": True,
-            },
-        )
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_describe_stream_summary(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
 
-        stubber.activate()
+    kinesis_stubber.stub_describe_stream_summary(
+        STREAM_NAME, STREAM_ARN, "ACTIVE", 2, error_code=error_code
+    )
 
-        wrapper = KinesisStreamWrapper(client)
+    if error_code is None:
+        summary = wrapper.describe_stream_summary(STREAM_NAME)
+        assert summary["StreamName"] == STREAM_NAME
+        assert summary["OpenShardCount"] == 2
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.describe_stream_summary(STREAM_NAME)
+        assert exc_info.value.response["Error"]["Code"] == error_code
 
-        try:
-            # 1. List streams
-            response = wrapper.list_streams(limit=10)
-            assert "StreamNames" in response
-            assert isinstance(response["StreamNames"], list)
 
-            # 2. Create stream
-            wrapper.create_stream(STREAM_NAME, shard_count=2)
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_update_shard_count(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
+    target = 4
+    current = 2
 
-            # 3. Wait for ACTIVE (one call since stub returns ACTIVE)
-            details = wrapper.wait_for_stream_active(STREAM_NAME, max_wait_seconds=90)
-            assert details["StreamStatus"] == "ACTIVE"
-            assert len(details["Shards"]) >= 2
+    kinesis_stubber.stub_update_shard_count(
+        STREAM_NAME, target, current, error_code=error_code
+    )
 
-            # 4. Put a single record
-            put_response = wrapper.put_record(
-                stream_name=STREAM_NAME,
-                data=sensor_payload,
-                partition_key="sensor-1",
-            )
-            assert "ShardId" in put_response
-            assert "SequenceNumber" in put_response
+    if error_code is None:
+        response = wrapper.update_shard_count(STREAM_NAME, target_shard_count=target)
+        assert response["CurrentShardCount"] == current
+        assert response["TargetShardCount"] == target
+    else:
+        with pytest.raises(ClientError) as exc_info:
+            wrapper.update_shard_count(STREAM_NAME, target_shard_count=target)
+        assert exc_info.value.response["Error"]["Code"] == error_code
 
-            # 5. Put a batch of records
-            batch_response = wrapper.put_records(
-                stream_name=STREAM_NAME, records=batch_records_input
-            )
-            assert len(batch_response.get("Records", list())) == 5
 
-            # 6. Get shard iterator
-            shard_iterator = wrapper.get_shard_iterator(
-                stream_name=STREAM_NAME,
-                shard_id=SHARD_ID_0,
-                iterator_type="TRIM_HORIZON",
-            )
-            assert isinstance(shard_iterator, str)
-            assert len(shard_iterator) > 0
+@pytest.mark.parametrize("error_code", [None, "TestException"])
+def test_delete_stream(make_stubber, error_code):
+    kinesis_client = boto3.client("kinesis")
+    kinesis_stubber = make_stubber(kinesis_client)
+    wrapper = KinesisStreamWrapper(kinesis_client)
 
-            # 7. Get records
-            get_response = wrapper.get_records(
-                shard_iterator=shard_iterator, limit=10
-            )
-            assert "Records" in get_response
-            assert "MillisBehindLatest" in get_response
-            all_records = get_response.get("Records", list())
-            assert len(all_records) >= 1
+    kinesis_stubber.stub_delete_stream(
+        STREAM_NAME, enforce_consumer_deletion=True, error_code=error_code
+    )
 
-            # Verify record data is valid JSON
-            for record in all_records:
-                data = record.get("Data", b"")
-                if isinstance(data, bytes):
-                    data = data.decode("utf-8")
-                parsed = json.loads(data)
-                assert isinstance(parsed, dict)
-
-            # 8. Describe stream summary
-            summary = wrapper.describe_stream_summary(STREAM_NAME)
-            assert summary["StreamName"] == STREAM_NAME
-            assert summary["StreamStatus"] == "ACTIVE"
-            assert "OpenShardCount" in summary
-            assert "RetentionPeriodHours" in summary
-            assert "EncryptionType" in summary
-            stream_mode = summary.get("StreamModeDetails", dict()).get(
-                "StreamMode", ""
-            )
-            assert stream_mode == "PROVISIONED"
-
-            # 9. Update shard count (2 → 4)
-            update_response = wrapper.update_shard_count(
-                stream_name=STREAM_NAME,
-                target_shard_count=4,
-            )
-            assert update_response.get("CurrentShardCount") == 2
-            assert update_response.get("TargetShardCount") == 4
-
-            # 10. Wait for ACTIVE after scaling
-            details_after = wrapper.wait_for_stream_active(
-                STREAM_NAME, max_wait_seconds=180
-            )
-            assert details_after["StreamStatus"] == "ACTIVE"
-
-        finally:
-            # 11. Delete stream — always clean up
+    if error_code is None:
+        wrapper.delete_stream(STREAM_NAME)
+        assert wrapper.name is None
+    else:
+        with pytest.raises(ClientError) as exc_info:
             wrapper.delete_stream(STREAM_NAME)
-
-        stubber.assert_no_pending_responses()
-        stubber.deactivate()
-
-    def test_hello_kinesis(self):
-        """Tests the Hello Kinesis flow — just listing streams — using Stubber."""
-        client = boto3.client("kinesis", region_name="us-east-1")
-        stubber = Stubber(client)
-
-        stubber.add_response(
-            "list_streams",
-            {
-                "StreamNames": ["my-test-stream"],
-                "HasMoreStreams": False,
-                "StreamSummaries": [
-                    {
-                        "StreamName": "my-test-stream",
-                        "StreamARN": "arn:aws:kinesis:us-east-1:123456789012:stream/my-test-stream",
-                        "StreamStatus": "ACTIVE",
-                        "StreamModeDetails": {"StreamMode": "ON_DEMAND"},
-                        "StreamCreationTimestamp": datetime(
-                            2024, 1, 1, tzinfo=timezone.utc
-                        ),
-                    }
-                ],
-            },
-            {"Limit": 10},
-        )
-
-        stubber.activate()
-
-        wrapper = KinesisStreamWrapper(client)
-        response = wrapper.list_streams(limit=10)
-        assert "StreamNames" in response
-        assert isinstance(response["StreamNames"], list)
-        assert "HasMoreStreams" in response
-
-        stubber.assert_no_pending_responses()
-        stubber.deactivate()
+        assert exc_info.value.response["Error"]["Code"] == error_code

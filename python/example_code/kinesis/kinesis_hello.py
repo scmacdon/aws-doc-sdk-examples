@@ -32,16 +32,18 @@ def hello_kinesis(kinesis_client):
         stream_names = response.get("StreamNames", list())
         has_more = response.get("HasMoreStreams", False)
         summaries = response.get("StreamSummaries", list())
+        # Build a lookup keyed by name; the API does not guarantee that
+        # StreamNames and StreamSummaries are parallel, same-order arrays.
+        summary_by_name = {s["StreamName"]: s for s in summaries}
         if stream_names:
             print(f"Found {len(stream_names)} Kinesis data stream(s):")
-            for i, name in enumerate(stream_names):
+            for name in stream_names:
                 info = ""
-                if i < len(summaries):
-                    status = summaries[i].get("StreamStatus", "UNKNOWN")
-                    mode = (
-                        summaries[i]
-                        .get("StreamModeDetails", dict())
-                        .get("StreamMode", "UNKNOWN")
+                summary = summary_by_name.get(name)
+                if summary is not None:
+                    status = summary.get("StreamStatus", "UNKNOWN")
+                    mode = summary.get("StreamModeDetails", dict()).get(
+                        "StreamMode", "UNKNOWN"
                     )
                     info = f" ({status}, {mode})"
                 print(f"  - {name}{info}")

@@ -11,7 +11,6 @@ to create, configure, produce to, consume from, scale, and clean up a stream.
 import json
 import logging
 import time
-from datetime import datetime, timezone
 
 import boto3
 from botocore.exceptions import ClientError
@@ -30,7 +29,6 @@ class KinesisStreamWrapper:
         self.kinesis_client = kinesis_client
         self.name = None
         self.details = None
-        self.stream_exists_waiter = kinesis_client.get_waiter("stream_exists")
 
     @classmethod
     def from_client(cls) -> "KinesisStreamWrapper":
@@ -41,6 +39,7 @@ class KinesisStreamWrapper:
         """
         kinesis_client = boto3.client("kinesis")
         return cls(kinesis_client)
+
     # snippet-end:[python.example_code.kinesis.KinesisStreamWrapper.decl]
 
     # snippet-start:[python.example_code.kinesis.ListStreams]
@@ -65,6 +64,7 @@ class KinesisStreamWrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.kinesis.ListStreams]
 
     def create_stream(self, name: str, shard_count: int = 2) -> None:
@@ -123,6 +123,7 @@ class KinesisStreamWrapper:
         :raises TimeoutError: If the stream does not become ACTIVE within the timeout.
         """
         start = time.time()
+        poll_interval = 3
         while True:
             details = self.describe_stream(name)
             status = details.get("StreamStatus", "")
@@ -130,7 +131,8 @@ class KinesisStreamWrapper:
                 logger.info("Stream %s is ACTIVE.", name)
                 return details
             elapsed = time.time() - start
-            if elapsed >= max_wait_seconds:
+            # Check the deadline before sleeping so we do not overshoot it.
+            if elapsed + poll_interval >= max_wait_seconds:
                 raise TimeoutError(
                     f"Stream '{name}' did not become ACTIVE within "
                     f"{max_wait_seconds} seconds. Current status: {status}"
@@ -141,11 +143,9 @@ class KinesisStreamWrapper:
                 status,
                 elapsed,
             )
-            time.sleep(3)
+            time.sleep(poll_interval)
 
-    def put_record(
-        self, stream_name: str, data: dict, partition_key: str
-    ) -> dict:
+    def put_record(self, stream_name: str, data: dict, partition_key: str) -> dict:
         """
         Writes a single data record to a Kinesis data stream.
 
@@ -221,6 +221,7 @@ class KinesisStreamWrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.kinesis.PutRecords]
 
     def get_shard_iterator(
@@ -305,6 +306,7 @@ class KinesisStreamWrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.kinesis.DescribeStreamSummary]
 
     # snippet-start:[python.example_code.kinesis.UpdateShardCount]
@@ -344,6 +346,7 @@ class KinesisStreamWrapper:
                     err.response["Error"]["Message"],
                 )
             raise
+
     # snippet-end:[python.example_code.kinesis.UpdateShardCount]
 
     def delete_stream(self, stream_name: str) -> None:

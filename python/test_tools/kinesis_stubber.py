@@ -177,6 +177,9 @@ class KinesisStubber(ExampleStubber):
                 for record in records
             ],
         }
+        # NOTE: The PutRecords API models FailedRecordCount with a minimum
+        # value of 1, so the botocore Stubber rejects FailedRecordCount=0.
+        # It is omitted here; wrapper code reads it via .get(..., 0).
         response = {
             "Records": [
                 {"ShardId": "test-id", "SequenceNumber": f"seq-{i}"}

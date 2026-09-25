@@ -129,6 +129,14 @@ kinesis_ListStreams:
             - description:
               snippet_tags:
                 - kns.abapv1.list_streams
+    Python:
+      versions:
+        - sdk_version: 3
+          github: python/example_code/kinesis
+          excerpts:
+            - description:
+              snippet_tags:
+                - python.example_code.kinesis.ListStreams
   services:
     kinesis: {ListStreams}
 kinesis_ListTagsForStream:

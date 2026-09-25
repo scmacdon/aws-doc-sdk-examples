@@ -18,17 +18,21 @@ to run a basics scenario that demonstrates the full lifecycle of a data stream:
 9. Delete the stream.
 """
 
-import json
 import logging
+import os
 import random
 import string
+import sys
 import time
 from datetime import datetime, timezone
 
-import boto3
 from botocore.exceptions import ClientError
 
-from kinesis_wrapper import KinesisStreamWrapper
+# Ensure the parent directory (python/example_code/kinesis) is importable so
+# this scenario runs regardless of the working directory it is launched from.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from kinesis_wrapper import KinesisStreamWrapper  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -165,8 +169,7 @@ class KinesisScenario:
         failed = response.get("FailedRecordCount", 0)
         result_records = response.get("Records", list())
         print(
-            f"  All {len(result_records)} records submitted "
-            f"({failed} failure(s))."
+            f"  All {len(result_records)} records submitted " f"({failed} failure(s))."
         )
         for i, rec in enumerate(result_records):
             if rec.get("ErrorCode"):
@@ -198,10 +201,9 @@ class KinesisScenario:
         all_records = list()
         attempts = 0
         max_attempts = 3
+        millis_behind = 0
         while attempts < max_attempts:
-            response = self.wrapper.get_records(
-                shard_iterator=shard_iterator, limit=10
-            )
+            response = self.wrapper.get_records(shard_iterator=shard_iterator, limit=10)
             fetched = response.get("Records", list())
             all_records.extend(fetched)
             millis_behind = response.get("MillisBehindLatest", 0)
@@ -220,9 +222,7 @@ class KinesisScenario:
                 data = record.get("Data", b"")
                 if isinstance(data, bytes):
                     data = data.decode("utf-8")
-                print(
-                    f"  Record {idx}: {record.get('PartitionKey', '')} | {data}"
-                )
+                print(f"  Record {idx}: {record.get('PartitionKey', '')} | {data}")
             print(f"  MillisBehindLatest: {millis_behind}")
         else:
             print("  No records retrieved from this shard.")
@@ -231,9 +231,7 @@ class KinesisScenario:
         """Step 7: Describe stream summary."""
         print("\nDescribing stream summary...")
         summary = self.wrapper.describe_stream_summary(self.stream_name)
-        mode = (
-            summary.get("StreamModeDetails", dict()).get("StreamMode", "UNKNOWN")
-        )
+        mode = summary.get("StreamModeDetails", dict()).get("StreamMode", "UNKNOWN")
         print(f"  Stream: {summary.get('StreamName', 'N/A')}")
         print(f"  ARN: {summary.get('StreamARN', 'N/A')}")
         print(f"  Status: {summary.get('StreamStatus', 'N/A')}")
@@ -259,9 +257,7 @@ class KinesisScenario:
             f"target={response.get('TargetShardCount', 'N/A')}"
         )
         print("  Waiting for stream to return to ACTIVE...")
-        self.wrapper.wait_for_stream_active(
-            self.stream_name, max_wait_seconds=120
-        )
+        self.wrapper.wait_for_stream_active(self.stream_name, max_wait_seconds=120)
         print("  Stream is ACTIVE with updated shard configuration.")
 
     def _cleanup(self) -> None:

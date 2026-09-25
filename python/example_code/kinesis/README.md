@@ -53,11 +53,12 @@ Code excerpts that show you how to call individual service functions.
 - [CreateStream](streams/kinesis_stream.py#L46)
 - [DeleteStream](streams/kinesis_stream.py#L90)
 - [DescribeStream](streams/kinesis_stream.py#L69)
-- [DescribeStreamSummary](kinesis_wrapper.py#L285)
+- [DescribeStreamSummary](kinesis_wrapper.py#L286)
 - [GetRecords](streams/kinesis_stream.py#L128)
+- [ListStreams](kinesis_wrapper.py#L45)
 - [PutRecord](streams/kinesis_stream.py#L105)
 - [PutRecords](kinesis_wrapper.py#L183)
-- [UpdateShardCount](kinesis_wrapper.py#L310)
+- [UpdateShardCount](kinesis_wrapper.py#L312)
 
 
 <!--custom.examples.start-->
